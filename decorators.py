@@ -6,5 +6,5 @@ def timestamp(func, *args, **kwargs):
         func(*args, **kwargs)
         end = time.time()
 
-        print(f'function {func.__name__} finished. Took {round(end - start)} seconds')
+        print(f'Process taked {round(end - start)} seconds.')
     return wrapper
