@@ -1,11 +1,12 @@
 import sys
 import cv2
-from typing import Dict
-from decorators import timestamp
+import imageio
+from typing import Any, List
 from packages.Arguments import Arguments
+from decorators import timestamp
 
-THUMB_RESOLUTION = 640
-FRAME_MOMENT_MULTIPLIER = 0.01
+GIF_RESOLUTION = 640
+GIF_FRAMES = 240
 
 @timestamp
 def generate_thumbnail(video_path: str, output_path: str):
@@ -25,18 +26,17 @@ def generate_thumbnail(video_path: str, output_path: str):
 
     print("Extract frame from video")
 
-    frame = extract_frame(video_path)
+    frames = extract_frame(video_path)
 
     print ("Preparing thumbnail image")
 
-    thumb = frame_to_image(frame)
+    buffers = frames_to_buffers(frames)
 
-    for _, buffer in thumb.items():
-        print("Saving image")
+    print(f'Saving image')
 
-        cv2.imwrite(output_path, buffer)
+    imageio.mimsave(output_path, buffers)
 
-def extract_frame(video_filename: str):
+def extract_frame(video_filename: str) -> List[Any]:
     """
     Args:
         - video_filename: str
@@ -53,18 +53,21 @@ def extract_frame(video_filename: str):
     video_length = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
 
     if video.isOpened() and video_length > 0:
-        frame_moment = round(video_length * FRAME_MOMENT_MULTIPLIER)
+        frames = []
         count = 0
 
         success, frame = video.read()
 
         while success:
-            if count == frame_moment:
-                return frame
+            if count <= GIF_FRAMES:
+                print(f'computing frame {count}', end='\r', flush=True)
+                frames.append(frame)
+            else:
+                return frames
             success, frame = video.read()
             count += 1
 
-def frame_to_image(frame) -> Dict[str, any]:
+def frames_to_buffers(frames: List[Any]) -> List[Any]:
     """
     Args:
         - frame: any
@@ -77,18 +80,17 @@ def frame_to_image(frame) -> Dict[str, any]:
     Description:
         Transforms a OpenCV2 Frame from a OpenCV2 Video into a image file
     """
+    size = GIF_RESOLUTION
+    buffers = []
 
-    height, width, _ = frame.shape
-    thumb = {}
-    size = THUMB_RESOLUTION
+    for frame in frames:
+        height, width, _ = frame.shape
+        if (width >= size):
+            r = size / width
+            max_size = (size, int(height * r))
+            buffers.append(cv2.resize(frame, max_size, interpolation=cv2.INTER_AREA))
 
-    if (width >= size):
-        r = size / width
-        max_size = (size, int(height * r))
-        thumb[str(size)] = cv2.resize(frame, max_size, interpolation=cv2.INTER_AREA)
-
-    return thumb
-    
+    return buffers
 
 if __name__ == '__main__':
     args = Arguments(sys.argv[1:])
