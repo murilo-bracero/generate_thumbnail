@@ -34,7 +34,7 @@ def generate_thumbnail(video_path: str, output_path: str):
 
     print(f'Saving image')
 
-    imageio.mimsave(output_path, buffers)
+    imageio.mimsave(output_path, buffers, fps=60)
 
 def extract_frame(video_filename: str) -> List[Any]:
     """
@@ -61,6 +61,10 @@ def extract_frame(video_filename: str) -> List[Any]:
         while success:
             if count <= GIF_FRAMES:
                 print(f'computing frame {count}', end='\r', flush=True)
+
+                # color correction
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
                 frames.append(frame)
             else:
                 return frames
@@ -84,11 +88,9 @@ def frames_to_buffers(frames: List[Any]) -> List[Any]:
     buffers = []
 
     for frame in frames:
-        height, width, _ = frame.shape
-        if (width >= size):
-            r = size / width
-            max_size = (size, int(height * r))
-            buffers.append(cv2.resize(frame, max_size, interpolation=cv2.INTER_AREA))
+        y, x, _ = frame.shape
+        max_size = (x // 5, y // 6)
+        buffers.append(cv2.resize(frame, max_size, interpolation=cv2.INTER_AREA))
 
     return buffers
 
